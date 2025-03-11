@@ -11,28 +11,111 @@
     <meta name="format-detection" content="telephone=no">
     <title>Nini Doesn't Want to Go Home</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- iOS Safari specific hack to ensure touch events work -->
+    <!-- Direct drawing script for iOS - this approach avoids the Safari touch event issues -->
     <script>
-        // iOS Safari touch event fix
+        // Wait for page to fully load
         window.addEventListener('load', function() {
-            // Detect iOS
+            // Check if we're on iOS
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             
             if (isIOS) {
-                // Get the canvas element
+                console.log("iOS device detected - applying direct drawing fix");
+                
+                // Get the game canvas and add special class
                 const canvas = document.getElementById('game-canvas');
+                document.body.classList.add('ios-device');
                 
-                // Prevent default behavior for all touch events on iOS
-                function preventIOSBehavior(e) {
+                // These variables will be used to track touch state
+                let isDrawing = false;
+                let lastX = 0;
+                let lastY = 0;
+                
+                // Completely disable default touch behavior
+                document.addEventListener('touchmove', function(e) {
+                    if (e.target === canvas) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                }, { passive: false });
+                
+                // Handle touch start
+                canvas.addEventListener('touchstart', function(e) {
                     e.preventDefault();
-                }
+                    
+                    // Get the touch coordinates
+                    const rect = canvas.getBoundingClientRect();
+                    const touch = e.touches[0];
+                    
+                    // Calculate position
+                    lastX = touch.clientX - rect.left;
+                    lastY = touch.clientY - rect.top;
+                    
+                    // Start drawing
+                    isDrawing = true;
+                    
+                    // Dispatch a custom event to notify our game code
+                    const startEvent = new CustomEvent('ios-draw-start', { 
+                        detail: { x: lastX, y: lastY }
+                    });
+                    canvas.dispatchEvent(startEvent);
+                    
+                    console.log("iOS touch start at:", lastX, lastY);
+                }, { passive: false });
                 
-                // Add a manual touch event listener to capture all touches
-                canvas.addEventListener('touchstart', preventIOSBehavior, { passive: false });
+                // Handle touch move
+                canvas.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (!isDrawing) return;
+                    
+                    // Get touch coordinates
+                    const rect = canvas.getBoundingClientRect();
+                    const touch = e.touches[0];
+                    
+                    // Calculate position
+                    const x = touch.clientX - rect.left;
+                    const y = touch.clientY - rect.top;
+                    
+                    // Dispatch a custom event to notify our game code
+                    const moveEvent = new CustomEvent('ios-draw-move', { 
+                        detail: { x: x, y: y }
+                    });
+                    canvas.dispatchEvent(moveEvent);
+                    
+                    // Update last position
+                    lastX = x;
+                    lastY = y;
+                    
+                    console.log("iOS touch move to:", x, y);
+                }, { passive: false });
                 
-                // Log message to console
-                console.log("iOS Safari touch event fix applied");
+                // Handle touch end
+                canvas.addEventListener('touchend', function(e) {
+                    if (!isDrawing) return;
+                    
+                    isDrawing = false;
+                    
+                    // Dispatch a custom event to notify our game code
+                    const endEvent = new CustomEvent('ios-draw-end');
+                    canvas.dispatchEvent(endEvent);
+                    
+                    console.log("iOS touch end");
+                }, { passive: true });
+                
+                // Handle touch cancel (e.g., if notification appears)
+                canvas.addEventListener('touchcancel', function(e) {
+                    if (!isDrawing) return;
+                    
+                    isDrawing = false;
+                    
+                    // Dispatch a custom event to notify our game code
+                    const endEvent = new CustomEvent('ios-draw-end');
+                    canvas.dispatchEvent(endEvent);
+                    
+                    console.log("iOS touch cancelled");
+                }, { passive: true });
             }
         });
     </script>

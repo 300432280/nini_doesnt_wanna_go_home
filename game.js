@@ -70,21 +70,15 @@ window.onload = function() {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     
-    // Special handling for iOS touch events
     if (isIOS) {
-        // For iOS we need to use { passive: false } to allow preventDefault()
-        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-        canvas.addEventListener('touchend', handleTouchEnd);
-        canvas.addEventListener('touchcancel', handleTouchEnd);
+        console.log("iOS device detected in game.js - using custom events");
         
-        // Add a special mobile-friendly class to the body
-        document.body.classList.add('ios-device');
-        
-        // Add iOS-specific debug message
-        console.log("iOS device detected, using special touch handling");
+        // Add listeners for our custom iOS touch events
+        canvas.addEventListener('ios-draw-start', handleIOSDrawStart);
+        canvas.addEventListener('ios-draw-move', handleIOSDrawMove);
+        canvas.addEventListener('ios-draw-end', handleIOSDrawEnd);
     } else {
-        // Normal touch handling for other devices
+        // Standard touch handling for non-iOS devices
         canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
         canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
         canvas.addEventListener('touchend', handleTouchEnd);
@@ -195,16 +189,10 @@ function togglePause() {
  * Handle touch start event for mobile devices
  */
 function handleTouchStart(e) {
-    // This must be called to prevent scrolling on iOS
-    e.preventDefault();
-    
-    // Additional iOS-specific handling
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    // Always stop propagation for iOS to prevent other handlers
-    if (isIOS) {
-        e.stopPropagation();
+    // Only prevent default for non-iOS devices
+    if (!/iPad|iPhone|iPod/.test(navigator.userAgent) && 
+        !(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+        e.preventDefault();
     }
     
     if (gamePaused || gameWon) return;
@@ -231,16 +219,10 @@ function handleTouchStart(e) {
  * Handle touch move event for mobile devices
  */
 function handleTouchMove(e) {
-    // This must be called to prevent scrolling on iOS
-    e.preventDefault();
-    
-    // Additional iOS-specific handling
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    // Always stop propagation for iOS to prevent other handlers
-    if (isIOS) {
-        e.stopPropagation();
+    // Only prevent default for non-iOS devices
+    if (!/iPad|iPhone|iPod/.test(navigator.userAgent) && 
+        !(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+        e.preventDefault();
     }
     
     if (!isDrawing || gamePaused || gameWon) return;
@@ -657,4 +639,57 @@ function updateLeaderboardDisplay() {
         listItem.textContent = `${leaderboard[i].toFixed(1)} seconds`;
         leaderboardList.appendChild(listItem);
     }
+}
+
+/**
+ * Handle iOS custom draw start event
+ */
+function handleIOSDrawStart(e) {
+    if (gamePaused || gameWon) return;
+    
+    console.log("iOS draw start handler called");
+    
+    isDrawing = true;
+    const x = e.detail.x;
+    const y = e.detail.y;
+    
+    currentLine = { points: [{ x, y }] };
+    
+    // Draw the starting point
+    drawGame();
+}
+
+/**
+ * Handle iOS custom draw move event
+ */
+function handleIOSDrawMove(e) {
+    if (!isDrawing || gamePaused || gameWon) return;
+    
+    console.log("iOS draw move handler called");
+    
+    const x = e.detail.x;
+    const y = e.detail.y;
+    
+    currentLine.points.push({ x, y });
+    
+    // Draw in real-time
+    drawGame();
+}
+
+/**
+ * Handle iOS custom draw end event
+ */
+function handleIOSDrawEnd() {
+    if (!isDrawing) return;
+    
+    console.log("iOS draw end handler called");
+    
+    isDrawing = false;
+    
+    if (currentLine && currentLine.points.length > 1) {
+        lines.push(currentLine);
+    }
+    
+    currentLine = null;
+    drawGame();
 } 

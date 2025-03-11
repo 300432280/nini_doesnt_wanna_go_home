@@ -189,6 +189,11 @@ button:hover {
     position: relative; 
     z-index: 10;
     cursor: pointer;
+    /* iOS touch-specific styles */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
 }
 
 /* Special iOS body style */
@@ -198,6 +203,15 @@ button:hover {
     overflow: hidden;
     width: 100%;
     height: 100%;
+    /* Prevent unwanted interactions */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* For iOS devices force use hardware acceleration */
+.ios-device #game-canvas {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
 }
 
 /* Make sure the body doesn't interfere with the canvas touch events */

@@ -6,10 +6,36 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#ff6b6b">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <!-- Prevent default touch behaviors like double-tap zooming -->
     <meta name="format-detection" content="telephone=no">
     <title>Nini Doesn't Want to Go Home</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- iOS Safari specific hack to ensure touch events work -->
+    <script>
+        // iOS Safari touch event fix
+        window.addEventListener('load', function() {
+            // Detect iOS
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            
+            if (isIOS) {
+                // Get the canvas element
+                const canvas = document.getElementById('game-canvas');
+                
+                // Prevent default behavior for all touch events on iOS
+                function preventIOSBehavior(e) {
+                    e.preventDefault();
+                }
+                
+                // Add a manual touch event listener to capture all touches
+                canvas.addEventListener('touchstart', preventIOSBehavior, { passive: false });
+                
+                // Log message to console
+                console.log("iOS Safari touch event fix applied");
+            }
+        });
+    </script>
 </head>
 <body>
     <div class="game-container">
@@ -37,9 +63,18 @@
             <h3>How to Play:</h3>
             <p>Draw lines with your finger or mouse to guide Nini the pig 🐷 back to her home 🏠.</p>
             <p>Nini will bounce off the lines you draw. Try to trap her inside the home area!</p>
+            <p class="ios-note" style="display: none; color: #ff6b6b; font-weight: bold;">iOS Users: For best experience, tap and drag to draw lines</p>
         </div>
     </div>
 
     <script src="game.js"></script>
+    <!-- iOS detection script to show specific instructions -->
+    <script>
+        // Show special instructions for iOS users
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent) || 
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+            document.querySelector('.ios-note').style.display = 'block';
+        }
+    </script>
 </body>
 </html> 

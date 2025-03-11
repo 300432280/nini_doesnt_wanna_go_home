@@ -66,11 +66,30 @@ window.onload = function() {
     canvas.addEventListener('mouseup', stopDrawing);
     canvas.addEventListener('mouseout', stopDrawing);
     
-    // Add touch event listeners
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-    canvas.addEventListener('touchend', handleTouchEnd);
-    canvas.addEventListener('touchcancel', handleTouchEnd);
+    // Detect if running on iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    // Special handling for iOS touch events
+    if (isIOS) {
+        // For iOS we need to use { passive: false } to allow preventDefault()
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd);
+        canvas.addEventListener('touchcancel', handleTouchEnd);
+        
+        // Add a special mobile-friendly class to the body
+        document.body.classList.add('ios-device');
+        
+        // Add iOS-specific debug message
+        console.log("iOS device detected, using special touch handling");
+    } else {
+        // Normal touch handling for other devices
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd);
+        canvas.addEventListener('touchcancel', handleTouchEnd);
+    }
     
     resetBtn.addEventListener('click', resetGame);
     pauseBtn.addEventListener('click', togglePause);
@@ -176,7 +195,17 @@ function togglePause() {
  * Handle touch start event for mobile devices
  */
 function handleTouchStart(e) {
-    e.preventDefault(); // This is crucial to prevent scrolling
+    // This must be called to prevent scrolling on iOS
+    e.preventDefault();
+    
+    // Additional iOS-specific handling
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    // Always stop propagation for iOS to prevent other handlers
+    if (isIOS) {
+        e.stopPropagation();
+    }
     
     if (gamePaused || gameWon) return;
     
@@ -189,6 +218,9 @@ function handleTouchStart(e) {
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
     
+    // Log coordinates for debugging
+    console.log("Touch start at:", x, y);
+    
     currentLine = { points: [{ x, y }] };
     
     // Draw the starting point
@@ -199,7 +231,17 @@ function handleTouchStart(e) {
  * Handle touch move event for mobile devices
  */
 function handleTouchMove(e) {
+    // This must be called to prevent scrolling on iOS
     e.preventDefault();
+    
+    // Additional iOS-specific handling
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    // Always stop propagation for iOS to prevent other handlers
+    if (isIOS) {
+        e.stopPropagation();
+    }
     
     if (!isDrawing || gamePaused || gameWon) return;
     
@@ -209,6 +251,9 @@ function handleTouchMove(e) {
     // Simple coordinate calculation
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
+    
+    // Log coordinates for debugging
+    console.log("Touch move to:", x, y);
     
     currentLine.points.push({ x, y });
     
@@ -220,9 +265,23 @@ function handleTouchMove(e) {
  * Handle touch end event for mobile devices
  */
 function handleTouchEnd(e) {
+    // For iOS, we should NOT call preventDefault here
+    // as it can interfere with touch end handling
+    
+    // Additional iOS-specific handling
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    if (isIOS) {
+        console.log("Touch end on iOS");
+    }
+    
     if (!isDrawing) return;
     
     isDrawing = false;
+    
+    // Log for debugging
+    console.log("Adding line with points:", currentLine?.points?.length);
     
     if (currentLine && currentLine.points.length > 1) {
         lines.push(currentLine);

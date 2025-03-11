@@ -50,11 +50,18 @@ window.onload = function() {
     loadLeaderboard();
     updateLeaderboardDisplay();
 
-    // Add event listeners
+    // Add event listeners for mouse
     canvas.addEventListener('mousedown', startDrawing);
     canvas.addEventListener('mousemove', draw);
     canvas.addEventListener('mouseup', stopDrawing);
     canvas.addEventListener('mouseout', stopDrawing);
+    
+    // Add touch event listeners for mobile devices
+    canvas.addEventListener('touchstart', handleTouchStart);
+    canvas.addEventListener('touchmove', handleTouchMove);
+    canvas.addEventListener('touchend', handleTouchEnd);
+    canvas.addEventListener('touchcancel', handleTouchEnd);
+    
     resetBtn.addEventListener('click', resetGame);
     pauseBtn.addEventListener('click', togglePause);
 
@@ -72,6 +79,30 @@ function resizeCanvas() {
     if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
         canvas.width = displayWidth;
         canvas.height = displayHeight;
+        
+        // Recalculate game dimensions when canvas size changes
+        if (gameStarted) {
+            // Position home in the bottom right quadrant
+            home.x = canvas.width - HOME_SIZE - CANVAS_PADDING;
+            home.y = canvas.height - HOME_SIZE - CANVAS_PADDING;
+            
+            // Position pig if not already set
+            if (pig.x === 0 && pig.y === 0) {
+                // Position pig in the top left quadrant
+                pig.x = CANVAS_PADDING * 2;
+                pig.y = CANVAS_PADDING * 2;
+                
+                // Set random initial direction
+                const angle = Math.random() * 2 * Math.PI;
+                pig.dx = Math.cos(angle) * PIG_SPEED;
+                pig.dy = Math.sin(angle) * PIG_SPEED;
+            }
+        }
+        
+        // Redraw the game if it's active
+        if (gameStarted && !gamePaused) {
+            drawGame();
+        }
     }
 }
 
@@ -88,35 +119,29 @@ function resetGame() {
     elapsedTime = 0;
     pauseBtn.textContent = 'Pause';
     
-    // Set random home position (ensuring it's fully within the canvas)
-    home.x = CANVAS_PADDING + Math.random() * (canvas.width - HOME_SIZE - 2 * CANVAS_PADDING);
-    home.y = CANVAS_PADDING + Math.random() * (canvas.height - HOME_SIZE - 2 * CANVAS_PADDING);
+    // Position home in the bottom right
+    home.x = canvas.width - HOME_SIZE - CANVAS_PADDING;
+    home.y = canvas.height - HOME_SIZE - CANVAS_PADDING;
     
-    // Set random pig position (ensuring it's not inside the home)
-    let pigX, pigY;
-    do {
-        pigX = CANVAS_PADDING + Math.random() * (canvas.width - PIG_SIZE - 2 * CANVAS_PADDING);
-        pigY = CANVAS_PADDING + Math.random() * (canvas.height - PIG_SIZE - 2 * CANVAS_PADDING);
-    } while (
-        pigX > home.x - PIG_SIZE && 
-        pigX < home.x + HOME_SIZE && 
-        pigY > home.y - PIG_SIZE && 
-        pigY < home.y + HOME_SIZE
-    );
+    // Position pig in the top left
+    pig.x = CANVAS_PADDING * 2;
+    pig.y = CANVAS_PADDING * 2;
     
-    pig.x = pigX;
-    pig.y = pigY;
-    
-    // Set random pig direction
-    const angle = Math.random() * Math.PI * 2;
+    // Set initial random direction for the pig
+    const angle = Math.random() * 2 * Math.PI;
     pig.dx = Math.cos(angle) * PIG_SPEED;
     pig.dy = Math.sin(angle) * PIG_SPEED;
     
-    // Start game loop
-    if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
+    // Adjust pig speed for smaller screens
+    if (canvas.width < 500) {
+        pig.dx *= 0.7;
+        pig.dy *= 0.7;
     }
-    gameLoop();
+    
+    // Start the game loop if it's not already running
+    if (!animationFrameId) {
+        gameLoop();
+    }
 }
 
 /**
@@ -133,6 +158,54 @@ function togglePause() {
         startTime = Date.now() - elapsedTime;
         gameLoop();
     }
+}
+
+/**
+ * Handle touch start event for mobile devices
+ */
+function handleTouchStart(e) {
+    e.preventDefault(); // Prevent scrolling
+    if (gamePaused || gameWon) return;
+    
+    isDrawing = true;
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    currentLine = { points: [{ x, y }] };
+}
+
+/**
+ * Handle touch move event for mobile devices
+ */
+function handleTouchMove(e) {
+    e.preventDefault(); // Prevent scrolling
+    if (!isDrawing || gamePaused || gameWon) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    currentLine.points.push({ x, y });
+    
+    // Redraw everything
+    drawGame();
+}
+
+/**
+ * Handle touch end event for mobile devices
+ */
+function handleTouchEnd(e) {
+    e.preventDefault(); // Prevent default behaviors
+    if (!isDrawing) return;
+    
+    isDrawing = false;
+    if (currentLine && currentLine.points.length > 1) {
+        lines.push(currentLine);
+    }
+    currentLine = null;
 }
 
 /**

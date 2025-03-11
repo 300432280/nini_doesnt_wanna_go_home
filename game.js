@@ -71,12 +71,30 @@ window.onload = function() {
                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     
     if (isIOS) {
-        console.log("iOS device detected in game.js - using custom events");
+        console.log("iOS device detected in game.js - using iOS-specific approach");
         
-        // Add listeners for our custom iOS touch events
-        canvas.addEventListener('ios-draw-start', handleIOSDrawStart);
-        canvas.addEventListener('ios-draw-move', handleIOSDrawMove);
-        canvas.addEventListener('ios-draw-end', handleIOSDrawEnd);
+        // Set up a listener for lines added by the iOS direct drawing system
+        canvas.addEventListener('ios-line-added', function(e) {
+            // Convert the direct-drawn line to our game format
+            const points = e.detail.points.map(p => ({ x: p.x, y: p.y }));
+            
+            // Don't add very short lines
+            if (points.length < 2) return;
+            
+            // Add the line to our game
+            const newLine = { points: points };
+            lines.push(newLine);
+            
+            console.log("Added iOS direct-drawn line with", points.length, "points");
+            
+            // Update the game state to check for collisions
+            drawGame();
+        });
+        
+        // Make sure the game is started
+        if (!gameStarted) {
+            resetGame();
+        }
     } else {
         // Standard touch handling for non-iOS devices
         canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
@@ -639,57 +657,4 @@ function updateLeaderboardDisplay() {
         listItem.textContent = `${leaderboard[i].toFixed(1)} seconds`;
         leaderboardList.appendChild(listItem);
     }
-}
-
-/**
- * Handle iOS custom draw start event
- */
-function handleIOSDrawStart(e) {
-    if (gamePaused || gameWon) return;
-    
-    console.log("iOS draw start handler called");
-    
-    isDrawing = true;
-    const x = e.detail.x;
-    const y = e.detail.y;
-    
-    currentLine = { points: [{ x, y }] };
-    
-    // Draw the starting point
-    drawGame();
-}
-
-/**
- * Handle iOS custom draw move event
- */
-function handleIOSDrawMove(e) {
-    if (!isDrawing || gamePaused || gameWon) return;
-    
-    console.log("iOS draw move handler called");
-    
-    const x = e.detail.x;
-    const y = e.detail.y;
-    
-    currentLine.points.push({ x, y });
-    
-    // Draw in real-time
-    drawGame();
-}
-
-/**
- * Handle iOS custom draw end event
- */
-function handleIOSDrawEnd() {
-    if (!isDrawing) return;
-    
-    console.log("iOS draw end handler called");
-    
-    isDrawing = false;
-    
-    if (currentLine && currentLine.points.length > 1) {
-        lines.push(currentLine);
-    }
-    
-    currentLine = null;
-    drawGame();
 } 

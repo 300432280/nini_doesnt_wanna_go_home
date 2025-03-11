@@ -11,7 +11,8 @@
     <meta name="format-detection" content="telephone=no">
     <title>Nini Doesn't Want to Go Home</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Direct drawing script for iOS - this approach avoids the Safari touch event issues -->
+    
+    <!-- iOS Safari fallback drawing implementation -->
     <script>
         // Wait for page to fully load
         window.addEventListener('load', function() {
@@ -20,102 +21,123 @@
                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             
             if (isIOS) {
-                console.log("iOS device detected - applying direct drawing fix");
-                
-                // Get the game canvas and add special class
-                const canvas = document.getElementById('game-canvas');
+                console.log("Implementing iOS fallback drawing solution");
                 document.body.classList.add('ios-device');
                 
-                // These variables will be used to track touch state
+                // Get the canvas and create a drawing context
+                const canvas = document.getElementById('game-canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Get the game container
+                const gameContainer = document.querySelector('.game-container');
+                
+                // Create a message to show users it's in direct drawing mode
+                const modeMessage = document.createElement('div');
+                modeMessage.textContent = "iOS Direct Drawing Mode Active";
+                modeMessage.style.backgroundColor = "#ff6b6b";
+                modeMessage.style.color = "white";
+                modeMessage.style.padding = "5px";
+                modeMessage.style.textAlign = "center";
+                modeMessage.style.fontWeight = "bold";
+                modeMessage.style.position = "fixed";
+                modeMessage.style.bottom = "0";
+                modeMessage.style.left = "0";
+                modeMessage.style.right = "0";
+                modeMessage.style.zIndex = "1000";
+                
+                // Add to body
+                document.body.appendChild(modeMessage);
+                
+                // Variables to store our lines
                 let isDrawing = false;
-                let lastX = 0;
-                let lastY = 0;
+                let lines = [];
+                let currentLine = null;
                 
-                // Completely disable default touch behavior
-                document.addEventListener('touchmove', function(e) {
-                    if (e.target === canvas) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
-                }, { passive: false });
+                // Shared line properties
+                const LINE_COLOR = '#ff0000';
+                const LINE_WIDTH = 3;
                 
-                // Handle touch start
-                canvas.addEventListener('touchstart', function(e) {
+                // Store pig and home
+                let pig = null;
+                let home = null;
+                
+                // Handle direct drawing functions
+                function startDrawing(e) {
                     e.preventDefault();
                     
-                    // Get the touch coordinates
                     const rect = canvas.getBoundingClientRect();
-                    const touch = e.touches[0];
+                    const x = e.touches[0].clientX - rect.left;
+                    const y = e.touches[0].clientY - rect.top;
                     
-                    // Calculate position
-                    lastX = touch.clientX - rect.left;
-                    lastY = touch.clientY - rect.top;
-                    
-                    // Start drawing
                     isDrawing = true;
+                    currentLine = [{ x, y }];
                     
-                    // Dispatch a custom event to notify our game code
-                    const startEvent = new CustomEvent('ios-draw-start', { 
-                        detail: { x: lastX, y: lastY }
-                    });
-                    canvas.dispatchEvent(startEvent);
-                    
-                    console.log("iOS touch start at:", lastX, lastY);
-                }, { passive: false });
+                    console.log("iOS direct start:", x, y);
+                }
                 
-                // Handle touch move
+                function moveDrawing(e) {
+                    e.preventDefault();
+                    
+                    if (!isDrawing) return;
+                    
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.touches[0].clientX - rect.left;
+                    const y = e.touches[0].clientY - rect.top;
+                    
+                    currentLine.push({ x, y });
+                    
+                    // Draw the current line
+                    drawCurrentLine();
+                    console.log("iOS direct move:", x, y);
+                }
+                
+                function stopDrawing() {
+                    if (!isDrawing) return;
+                    
+                    isDrawing = false;
+                    if (currentLine && currentLine.length > 1) {
+                        lines.push(currentLine);
+                        
+                        // Send this line to the game.js via a custom event
+                        const lineEvent = new CustomEvent('ios-line-added', {
+                            detail: { points: currentLine }
+                        });
+                        canvas.dispatchEvent(lineEvent);
+                    }
+                    
+                    currentLine = null;
+                    console.log("iOS direct end, lines count:", lines.length);
+                }
+                
+                function drawCurrentLine() {
+                    if (!currentLine || currentLine.length < 2) return;
+                    
+                    // Draw the current line segment
+                    ctx.strokeStyle = LINE_COLOR;
+                    ctx.lineWidth = LINE_WIDTH;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(currentLine[0].x, currentLine[0].y);
+                    
+                    for (let i = 1; i < currentLine.length; i++) {
+                        ctx.lineTo(currentLine[i].x, currentLine[i].y);
+                    }
+                    
+                    ctx.stroke();
+                }
+                
+                // Add direct event listeners
+                canvas.addEventListener('touchstart', startDrawing, { passive: false });
+                canvas.addEventListener('touchmove', moveDrawing, { passive: false });
+                canvas.addEventListener('touchend', stopDrawing);
+                canvas.addEventListener('touchcancel', stopDrawing);
+                
+                // Prevent scrolling on the canvas
                 canvas.addEventListener('touchmove', function(e) {
                     e.preventDefault();
-                    e.stopPropagation();
-                    
-                    if (!isDrawing) return;
-                    
-                    // Get touch coordinates
-                    const rect = canvas.getBoundingClientRect();
-                    const touch = e.touches[0];
-                    
-                    // Calculate position
-                    const x = touch.clientX - rect.left;
-                    const y = touch.clientY - rect.top;
-                    
-                    // Dispatch a custom event to notify our game code
-                    const moveEvent = new CustomEvent('ios-draw-move', { 
-                        detail: { x: x, y: y }
-                    });
-                    canvas.dispatchEvent(moveEvent);
-                    
-                    // Update last position
-                    lastX = x;
-                    lastY = y;
-                    
-                    console.log("iOS touch move to:", x, y);
                 }, { passive: false });
-                
-                // Handle touch end
-                canvas.addEventListener('touchend', function(e) {
-                    if (!isDrawing) return;
-                    
-                    isDrawing = false;
-                    
-                    // Dispatch a custom event to notify our game code
-                    const endEvent = new CustomEvent('ios-draw-end');
-                    canvas.dispatchEvent(endEvent);
-                    
-                    console.log("iOS touch end");
-                }, { passive: true });
-                
-                // Handle touch cancel (e.g., if notification appears)
-                canvas.addEventListener('touchcancel', function(e) {
-                    if (!isDrawing) return;
-                    
-                    isDrawing = false;
-                    
-                    // Dispatch a custom event to notify our game code
-                    const endEvent = new CustomEvent('ios-draw-end');
-                    canvas.dispatchEvent(endEvent);
-                    
-                    console.log("iOS touch cancelled");
-                }, { passive: true });
             }
         });
     </script>

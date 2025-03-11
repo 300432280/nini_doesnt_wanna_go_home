@@ -76,15 +76,27 @@ function resizeCanvas() {
     const displayWidth = canvas.clientWidth;
     const displayHeight = canvas.clientHeight;
     
-    if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-        canvas.width = displayWidth;
-        canvas.height = displayHeight;
+    // Get the device pixel ratio
+    const dpr = window.devicePixelRatio || 1;
+    
+    // Set the canvas size for higher resolution on high-DPI screens
+    if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
+        // Set the canvas dimensions with DPR for sharper rendering
+        canvas.width = displayWidth * dpr;
+        canvas.height = displayHeight * dpr;
+        
+        // Scale the context to ensure correct drawing
+        ctx.scale(dpr, dpr);
+        
+        // Set style size to maintain layout
+        canvas.style.width = displayWidth + 'px';
+        canvas.style.height = displayHeight + 'px';
         
         // Recalculate game dimensions when canvas size changes
         if (gameStarted) {
             // Position home in the bottom right quadrant
-            home.x = canvas.width - HOME_SIZE - CANVAS_PADDING;
-            home.y = canvas.height - HOME_SIZE - CANVAS_PADDING;
+            home.x = displayWidth - HOME_SIZE - CANVAS_PADDING;
+            home.y = displayHeight - HOME_SIZE - CANVAS_PADDING;
             
             // Position pig if not already set
             if (pig.x === 0 && pig.y === 0) {
@@ -167,11 +179,18 @@ function handleTouchStart(e) {
     e.preventDefault(); // Prevent scrolling
     if (gamePaused || gameWon) return;
     
+    // Start game if not started yet
+    if (!gameStarted) {
+        resetGame();
+    }
+    
     isDrawing = true;
     const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
+    
+    // Calculate touch position with proper scaling
+    const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
     
     currentLine = { points: [{ x, y }] };
 }
@@ -185,8 +204,10 @@ function handleTouchMove(e) {
     
     const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
+    
+    // Calculate touch position with proper scaling
+    const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
     
     currentLine.points.push({ x, y });
     
@@ -198,7 +219,7 @@ function handleTouchMove(e) {
  * Handle touch end event for mobile devices
  */
 function handleTouchEnd(e) {
-    e.preventDefault(); // Prevent default behaviors
+    // Don't prevent default here to allow for scrolling after drawing
     if (!isDrawing) return;
     
     isDrawing = false;
@@ -445,15 +466,15 @@ function checkWinCondition() {
  * Draw the game state
  */
 function drawGame() {
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
     
     // Draw home
     ctx.fillStyle = HOME_COLOR;
     ctx.fillRect(home.x, home.y, home.size, home.size);
     
     // Draw home emoji
-    ctx.font = `${HOME_SIZE * 0.6}px Arial`;
+    ctx.font = '40px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(HOME_EMOJI, home.x + home.size / 2, home.y + home.size / 2);
@@ -477,7 +498,7 @@ function drawGame() {
         ctx.stroke();
     }
     
-    // Draw current line being drawn
+    // Draw current line if drawing
     if (currentLine && currentLine.points.length > 1) {
         ctx.beginPath();
         ctx.moveTo(currentLine.points[0].x, currentLine.points[0].y);
@@ -490,10 +511,32 @@ function drawGame() {
     }
     
     // Draw pig
-    ctx.font = `${pig.size}px Arial`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
+    ctx.font = '30px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.fillText(PIG_EMOJI, pig.x, pig.y);
+    
+    // Draw game win message if won
+    if (gameWon) {
+        const timeScore = (elapsedTime / 1000).toFixed(1);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
+        
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+            `Nini is home!`, 
+            canvas.width / (2 * (window.devicePixelRatio || 1)), 
+            canvas.height / (2 * (window.devicePixelRatio || 1)) - 40
+        );
+        ctx.fillText(
+            `Time: ${timeScore}s`, 
+            canvas.width / (2 * (window.devicePixelRatio || 1)), 
+            canvas.height / (2 * (window.devicePixelRatio || 1)) + 40
+        );
+    }
 }
 
 /**

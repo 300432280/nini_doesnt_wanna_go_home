@@ -82,6 +82,8 @@ button:hover {
     border-radius: 8px;
     cursor: crosshair;
     height: 500px;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .leaderboard {

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nini Doesn't Want to Go Home</title>
+    <link href="css/tailwind.css" rel="stylesheet">
+</head>
+<body class="bg-gray-800 text-white min-h-screen flex flex-col items-center p-4">
+    <h1 class="text-3xl font-bold mb-4 text-pig-pink">Nini Doesn't Want to Go Home</h1>
+    
+    <div class="w-full max-w-6xl flex flex-col md:flex-row gap-4">
+        <!-- Game Canvas -->
+        <div class="relative flex-grow">
+            <canvas id="game-canvas" class="bg-gray-700 rounded-lg w-full h-[500px] shadow-lg"></canvas>
+            
+            <!-- Game Controls -->
+            <div class="absolute top-2 left-2 flex gap-2">
+                <button id="reset-btn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded transition-colors shadow">Reset</button>
+                <button id="pause-btn" class="bg-amber-600 hover:bg-amber-700 px-4 py-2 rounded transition-colors shadow">Pause</button>
+            </div>
+            
+            <!-- Timer -->
+            <div class="absolute top-2 right-2 bg-gray-900 bg-opacity-70 p-2 rounded shadow">
+                <span class="font-semibold">Time:</span> <span id="timer" class="font-mono">0.0</span>s
+            </div>
+        </div>
+        
+        <!-- Leaderboard -->
+        <div class="bg-gray-900 rounded-lg p-4 md:w-64 shadow-lg">
+            <h2 class="text-xl font-bold mb-2 text-center text-pig-pink">Today's Best Times</h2>
+            <div class="bg-gray-800 rounded p-2">
+                <ul id="leaderboard-list" class="space-y-1"></ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Instructions -->
+    <div class="mt-6 bg-gray-900 p-4 rounded-lg max-w-2xl shadow-lg">
+        <h2 class="text-xl font-bold mb-2 text-pig-pink">How to Play</h2>
+        <ul class="list-disc pl-5 space-y-1">
+            <li>Draw red lines with your mouse to redirect Nini the pig 🐷</li>
+            <li>Try to trap Nini entirely inside the home area 🏠</li>
+            <li>The faster you get Nini home, the better your score!</li>
+        </ul>
+    </div>
+    
+    <footer class="mt-8 text-center text-gray-400 text-sm">
+        <p>Nini Doesn't Want to Go Home - A fun web game built with HTML5 Canvas, Node.js, and Tailwind CSS</p>
+    </footer>
+    
+    <script src="js/game.js"></script>
+    <script src="js/ui.js"></script>
+</body>
+</html> 

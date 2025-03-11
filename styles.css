@@ -84,6 +84,8 @@ button:hover {
     height: 500px;
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .leaderboard {

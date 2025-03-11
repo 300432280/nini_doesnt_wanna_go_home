@@ -50,15 +50,25 @@ window.onload = function() {
     loadLeaderboard();
     updateLeaderboardDisplay();
 
-    // Add event listeners for mouse
+    // Remove previous event listeners if any
+    canvas.removeEventListener('mousedown', startDrawing);
+    canvas.removeEventListener('mousemove', draw);
+    canvas.removeEventListener('mouseup', stopDrawing);
+    canvas.removeEventListener('mouseout', stopDrawing);
+    canvas.removeEventListener('touchstart', handleTouchStart);
+    canvas.removeEventListener('touchmove', handleTouchMove);
+    canvas.removeEventListener('touchend', handleTouchEnd);
+    canvas.removeEventListener('touchcancel', handleTouchEnd);
+    
+    // Add mouse event listeners
     canvas.addEventListener('mousedown', startDrawing);
     canvas.addEventListener('mousemove', draw);
     canvas.addEventListener('mouseup', stopDrawing);
     canvas.addEventListener('mouseout', stopDrawing);
     
-    // Add touch event listeners for mobile devices
-    canvas.addEventListener('touchstart', handleTouchStart);
-    canvas.addEventListener('touchmove', handleTouchMove);
+    // Add touch event listeners
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     canvas.addEventListener('touchend', handleTouchEnd);
     canvas.addEventListener('touchcancel', handleTouchEnd);
     
@@ -73,38 +83,28 @@ window.onload = function() {
  * Resize the canvas to match its display size
  */
 function resizeCanvas() {
+    // Get the display width and height
     const displayWidth = canvas.clientWidth;
     const displayHeight = canvas.clientHeight;
     
-    // Get the device pixel ratio
-    const dpr = window.devicePixelRatio || 1;
-    
-    // Set the canvas size for higher resolution on high-DPI screens
-    if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
-        // Set the canvas dimensions with DPR for sharper rendering
-        canvas.width = displayWidth * dpr;
-        canvas.height = displayHeight * dpr;
+    // Check if the canvas needs to be resized
+    if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+        // Set the canvas width and height directly without considering DPR
+        canvas.width = displayWidth;
+        canvas.height = displayHeight;
         
-        // Scale the context to ensure correct drawing
-        ctx.scale(dpr, dpr);
-        
-        // Set style size to maintain layout
-        canvas.style.width = displayWidth + 'px';
-        canvas.style.height = displayHeight + 'px';
-        
-        // Recalculate game dimensions when canvas size changes
+        // Recalculate game dimensions
         if (gameStarted) {
-            // Position home in the bottom right quadrant
+            // Position home in the bottom right
             home.x = displayWidth - HOME_SIZE - CANVAS_PADDING;
             home.y = displayHeight - HOME_SIZE - CANVAS_PADDING;
             
-            // Position pig if not already set
+            // Position pig in the top left if not already set
             if (pig.x === 0 && pig.y === 0) {
-                // Position pig in the top left quadrant
                 pig.x = CANVAS_PADDING * 2;
                 pig.y = CANVAS_PADDING * 2;
                 
-                // Set random initial direction
+                // Set random direction
                 const angle = Math.random() * 2 * Math.PI;
                 pig.dx = Math.cos(angle) * PIG_SPEED;
                 pig.dy = Math.sin(angle) * PIG_SPEED;
@@ -176,42 +176,43 @@ function togglePause() {
  * Handle touch start event for mobile devices
  */
 function handleTouchStart(e) {
-    e.preventDefault(); // Prevent scrolling
+    e.preventDefault(); // This is crucial to prevent scrolling
+    
     if (gamePaused || gameWon) return;
     
-    // Start game if not started yet
-    if (!gameStarted) {
-        resetGame();
-    }
-    
     isDrawing = true;
+    
     const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
     
-    // Calculate touch position with proper scaling
-    const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
-    const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
+    // Simple coordinate calculation
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
     
     currentLine = { points: [{ x, y }] };
+    
+    // Draw the starting point
+    drawGame();
 }
 
 /**
  * Handle touch move event for mobile devices
  */
 function handleTouchMove(e) {
-    e.preventDefault(); // Prevent scrolling
+    e.preventDefault();
+    
     if (!isDrawing || gamePaused || gameWon) return;
     
     const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
     
-    // Calculate touch position with proper scaling
-    const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
-    const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
+    // Simple coordinate calculation
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
     
     currentLine.points.push({ x, y });
     
-    // Redraw everything
+    // Redraw to show the line in real-time
     drawGame();
 }
 
@@ -219,14 +220,16 @@ function handleTouchMove(e) {
  * Handle touch end event for mobile devices
  */
 function handleTouchEnd(e) {
-    // Don't prevent default here to allow for scrolling after drawing
     if (!isDrawing) return;
     
     isDrawing = false;
+    
     if (currentLine && currentLine.points.length > 1) {
         lines.push(currentLine);
     }
+    
     currentLine = null;
+    drawGame();
 }
 
 /**
@@ -467,7 +470,7 @@ function checkWinCondition() {
  */
 function drawGame() {
     // Clear the canvas
-    ctx.clearRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Draw home
     ctx.fillStyle = HOME_COLOR;
@@ -520,7 +523,7 @@ function drawGame() {
     if (gameWon) {
         const timeScore = (elapsedTime / 1000).toFixed(1);
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         ctx.fillStyle = 'white';
         ctx.font = 'bold 36px Arial';
@@ -528,13 +531,13 @@ function drawGame() {
         ctx.textBaseline = 'middle';
         ctx.fillText(
             `Nini is home!`, 
-            canvas.width / (2 * (window.devicePixelRatio || 1)), 
-            canvas.height / (2 * (window.devicePixelRatio || 1)) - 40
+            canvas.width / 2, 
+            canvas.height / 2 - 40
         );
         ctx.fillText(
             `Time: ${timeScore}s`, 
-            canvas.width / (2 * (window.devicePixelRatio || 1)), 
-            canvas.height / (2 * (window.devicePixelRatio || 1)) + 40
+            canvas.width / 2, 
+            canvas.height / 2 + 40
         );
     }
 }
